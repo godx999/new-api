@@ -5981,6 +5981,17 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
-    "Zoom": "缩放"
+    "Zoom": "缩放",
+    "CNB AI Quota": "CNB AI 额度",
+    "Credits": "Credits",
+    "Dev core-hours": "Dev 核时",
+    "CI core-hours": "CI 核时",
+    "Token Usage": "Token 用量",
+    "Synced every 5 min": "每 5 分钟同步",
+    "Updated {{time}}": "更新于 {{time}}",
+    "Today (UTC+8)": "今日 (UTC+8)",
+    "Cumulative": "累计",
+    "Last 7 days": "近 7 天",
+    "In-flight (not yet settled)": "预留中（尚未结算）"
   }
 }

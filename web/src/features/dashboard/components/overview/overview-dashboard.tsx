@@ -48,6 +48,7 @@ import {
 } from '@/components/page-transition'
 import { Button } from '@/components/ui/button'
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
+import { CnbQuotaCard } from '@/features/cnb-quota/components/cnb-quota-card'
 import { fetchTokenKey, getApiKeys } from '@/features/keys/api'
 import type { ApiKey } from '@/features/keys/types'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
@@ -807,6 +808,11 @@ export function OverviewDashboard() {
                   {isAdmin && (
                     <CardStaggerItem className='lg:col-span-2'>
                       <PerformanceHealthPanel />
+                    </CardStaggerItem>
+                  )}
+                  {isAdmin && (
+                    <CardStaggerItem className='lg:col-span-2'>
+                      <CnbQuotaCard />
                     </CardStaggerItem>
                   )}
                   {showApiInfoPanel && (

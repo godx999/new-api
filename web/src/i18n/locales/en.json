@@ -5981,6 +5981,17 @@
     "Zero retention": "Zero retention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
-    "Zoom": "Zoom"
+    "Zoom": "Zoom",
+    "CNB AI Quota": "CNB AI Quota",
+    "Credits": "Credits",
+    "Dev core-hours": "Dev core-hours",
+    "CI core-hours": "CI core-hours",
+    "Token Usage": "Token Usage",
+    "Synced every 5 min": "Synced every 5 min",
+    "Updated {{time}}": "Updated {{time}}",
+    "Today (UTC+8)": "Today (UTC+8)",
+    "Cumulative": "Cumulative",
+    "Last 7 days": "Last 7 days",
+    "In-flight (not yet settled)": "In-flight (not yet settled)"
   }
 }

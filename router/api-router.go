@@ -335,6 +335,8 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
 
+		apiRouter.GET("/cnb_quota", middleware.DisableCache(), middleware.AdminAuth(), controller.GetCnbQuota)
+
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{
 			logRoute.GET("/token", middleware.TokenAuthReadOnly(), controller.GetLogByKey)
