@@ -19,6 +19,7 @@ For commercial licensing, please contact support@quantumnous.com
 import {
   Activity,
   Box,
+  ChartColumn,
   ClipboardList,
   CreditCard,
   FileText,
@@ -32,6 +33,7 @@ import {
   ServerCog,
   Settings,
   ShieldCheck,
+  Signal,
   Ticket,
   User,
   Users,
@@ -82,6 +84,16 @@ export function useSidebarData(): SidebarData {
             title: t('Dashboard'),
             url: '/dashboard/models',
             icon: LayoutDashboard,
+          },
+          {
+            title: t('Usage Details'),
+            url: '/usage-details',
+            icon: ChartColumn,
+          },
+          {
+            title: t('Model Status'),
+            url: '/model-status',
+            icon: Signal,
           },
           {
             title: t('API Keys'),

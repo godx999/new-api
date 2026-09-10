@@ -334,8 +334,11 @@ func SetApiRouter(router *gin.Engine) {
 		dataRoute.GET("/self", middleware.UserAuth(), controller.GetUserQuotaDates)
 		dataRoute.GET("/flow", middleware.AdminAuth(), controller.GetAllFlowQuotaDates)
 		dataRoute.GET("/flow/self", middleware.UserAuth(), controller.GetUserFlowQuotaDates)
+		dataRoute.GET("/models", middleware.DisableCache(), middleware.AdminAuth(), controller.GetModelUsage)
+		dataRoute.GET("/models/self", middleware.DisableCache(), middleware.UserAuth(), controller.GetUserModelUsage)
 
 		apiRouter.GET("/cnb_quota", middleware.DisableCache(), middleware.AdminAuth(), controller.GetCnbQuota)
+		apiRouter.GET("/model_status", middleware.DisableCache(), middleware.UserAuth(), controller.GetModelStatus)
 
 		logRoute.Use(middleware.CORS(), middleware.CriticalRateLimit())
 		{

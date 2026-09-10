@@ -22,9 +22,21 @@ import type { NavGroup, NavItem } from '@/components/layout/types'
 import { useStatus } from '@/hooks/use-status'
 import { useAuthStore } from '@/stores/auth-store'
 
+/**
+ * Modules are stored either as a legacy boolean (sidebar display only; the
+ * feature itself stays on) or as an object carrying a separate feature switch,
+ * so a page can keep running while being hidden from the sidebar.
+ */
+export type SidebarModuleFlags = {
+  enabled: boolean
+  visible: boolean
+}
+
+type SidebarModuleValue = boolean | SidebarModuleFlags
+
 type SidebarSectionConfig = {
   enabled: boolean
-  [key: string]: boolean
+  [key: string]: SidebarModuleValue
 }
 
 type SidebarModulesAdminConfig = Record<string, SidebarSectionConfig>
@@ -50,6 +62,8 @@ const DEFAULT_SIDEBAR_MODULES: SidebarModulesAdminConfig = {
     audit: true,
     midjourney: true,
     task: true,
+    usage_details: { enabled: true, visible: true },
+    model_status: { enabled: true, visible: true },
   },
   personal: {
     enabled: true,
@@ -108,6 +122,8 @@ const URL_TO_CONFIG_MAP: Record<string, { section: string; module: string }> = {
   '/usage-logs/audit': { section: 'console', module: 'audit' },
   '/usage-logs/drawing': { section: 'console', module: 'midjourney' },
   '/usage-logs/task': { section: 'console', module: 'task' },
+  '/usage-details': { section: 'console', module: 'usage_details' },
+  '/model-status': { section: 'console', module: 'model_status' },
   '/wallet': { section: 'personal', module: 'topup' },
   '/profile': { section: 'personal', module: 'personal' },
   '/security': { section: 'personal', module: 'security' },
@@ -163,6 +179,25 @@ function parseUserSidebarConfig(
   }
 }
 
+/** Sidebar visibility of one module value; undefined means "not listed". */
+function moduleVisible(value: SidebarModuleValue | undefined): boolean {
+  if (value === undefined) return false
+  if (typeof value === 'boolean') return value
+  return value.visible
+}
+
+/** Feature switch of one module value; legacy booleans keep the feature on. */
+function moduleFeatureOn(value: SidebarModuleValue | undefined): boolean {
+  if (value === undefined) return true
+  if (typeof value === 'boolean') return true
+  return value.enabled
+}
+
+/** The user layer only narrows, so an undefined field stays visible. */
+function userModuleVisible(value: SidebarModuleValue | undefined): boolean {
+  return value === undefined ? true : moduleVisible(value)
+}
+
 /**
  * Check if a module is enabled. Admin config is the first (authoritative)
  * layer: if admin disables a section/module it is always hidden. User config
@@ -183,7 +218,7 @@ function isModuleEnabled(
   const { section, module } = mapping
   const adminSection = adminConfig[section]
   const adminAllowed = Boolean(
-    adminSection && adminSection.enabled && adminSection[module] === true
+    adminSection && adminSection.enabled && moduleVisible(adminSection[module])
   )
   if (!adminAllowed) return false
 
@@ -192,7 +227,7 @@ function isModuleEnabled(
   const userSection = userConfig[section]
   if (!userSection) return true
   if (userSection.enabled === false) return false
-  return userSection[module] !== false
+  return userModuleVisible(userSection[module])
 }
 
 /**
@@ -206,13 +241,15 @@ function isNavItemVisible(
   // Handle dynamic chat presets type — also runs the admin × user AND gate
   if ('type' in item && item.type === 'chat-presets') {
     const adminChat = adminConfig.chat
-    const adminAllowed = Boolean(adminChat?.enabled && adminChat.chat === true)
+    const adminAllowed = Boolean(
+      adminChat?.enabled && moduleVisible(adminChat.chat)
+    )
     if (!adminAllowed) return false
     if (!userConfig) return true
     const userChat = userConfig.chat
     if (!userChat) return true
     if (userChat.enabled === false) return false
-    return userChat.chat !== false
+    return userModuleVisible(userChat.chat)
   }
 
   // Handle direct link type
@@ -332,4 +369,29 @@ export function useIsSidebarModuleVisible(url: string): boolean {
       : parseUserSidebarConfig(auth?.user?.sidebar_modules)
 
   return isModuleEnabled(url, adminConfig, userConfig)
+}
+
+/**
+ * Check whether a module's *feature* switch is on. This is deliberately
+ * separate from sidebar visibility: an admin can hide a page from the sidebar
+ * while keeping its feature (and any background work it drives) running.
+ * Legacy boolean entries and unlisted modules report enabled.
+ */
+export function useIsModuleFeatureEnabled(url: string): boolean {
+  const { status } = useStatus()
+
+  const adminConfig = parseSidebarConfig(
+    status?.SidebarModulesAdmin as string | null | undefined
+  )
+
+  const mapping = URL_TO_CONFIG_MAP[url]
+  if (!mapping) return true
+
+  const adminSection = adminConfig[mapping.section]
+  if (!adminSection) return true
+  if (adminSection.enabled === false) return false
+  if (!moduleFeatureOn(adminSection[mapping.module])) return false
+
+  // The user layer only narrows what is displayed, never what is enabled.
+  return true
 }

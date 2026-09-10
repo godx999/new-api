@@ -24,7 +24,7 @@ import dayjs from '@/lib/dayjs'
 /**
  * Time granularity type
  */
-export type TimeGranularity = 'hour' | 'day' | 'week'
+export type TimeGranularity = 'hour' | 'day' | 'week' | 'month'
 
 /**
  * Convert Date object to Unix timestamp (seconds)
@@ -156,7 +156,7 @@ export function formatDateTimeObject(date: Date): string {
 /**
  * Format timestamp for chart display based on time granularity
  * @param timestamp Unix timestamp in seconds
- * @param granularity Time granularity: 'hour', 'day', or 'week'
+ * @param granularity Time granularity: 'hour', 'day', 'week' or 'month'
  * @returns Formatted string suitable for chart axis
  */
 export function formatChartTime(
@@ -164,6 +164,11 @@ export function formatChartTime(
   granularity: TimeGranularity = 'day'
 ): string {
   const d = dayjs(timestamp * 1000)
+
+  if (granularity === 'month') {
+    return d.format('YYYY-MM')
+  }
+
   let result = d.format('MM-DD')
 
   if (granularity === 'hour') {

@@ -41,6 +41,39 @@ type testResult struct {
 	newAPIError *types.NewAPIError
 }
 
+// channelTestModel resolves the model a channel test will exercise: the
+// channel's configured test model, else the first model it serves.
+func channelTestModel(channel *model.Channel) string {
+	if channel == nil {
+		return ""
+	}
+	if channel.TestModel != nil && strings.TrimSpace(*channel.TestModel) != "" {
+		return strings.TrimSpace(*channel.TestModel)
+	}
+	models := channel.GetModels()
+	if len(models) > 0 && strings.TrimSpace(models[0]) != "" {
+		return strings.TrimSpace(models[0])
+	}
+	return "gpt-4o-mini"
+}
+
+// recordChannelProbe stores one test result for the model status page. It is a
+// no-op when the model status feature is switched off, so turning the feature
+// off also stops the history from growing.
+func recordChannelProbe(channel *model.Channel, testModel string, success bool, latencyMs int64) {
+	if channel == nil {
+		return
+	}
+	if !operation_setting.IsSidebarModuleFeatureEnabled("console", "model_status") {
+		return
+	}
+	name := strings.TrimSpace(testModel)
+	if name == "" {
+		name = channelTestModel(channel)
+	}
+	model.RecordChannelProbe(channel.Id, name, success, int(latencyMs))
+}
+
 func normalizeChannelTestEndpoint(channel *model.Channel, endpointType string) string {
 	normalized := strings.TrimSpace(endpointType)
 	if normalized != "" {
@@ -95,17 +128,7 @@ func testChannel(ctx context.Context, channel *model.Channel, testUserID int, te
 
 	testModel = strings.TrimSpace(testModel)
 	if testModel == "" {
-		if channel.TestModel != nil && *channel.TestModel != "" {
-			testModel = strings.TrimSpace(*channel.TestModel)
-		} else {
-			models := channel.GetModels()
-			if len(models) > 0 {
-				testModel = strings.TrimSpace(models[0])
-			}
-			if testModel == "" {
-				testModel = "gpt-4o-mini"
-			}
-		}
+		testModel = channelTestModel(channel)
 	}
 
 	endpointType = normalizeChannelTestEndpoint(channel, endpointType)
@@ -890,6 +913,7 @@ func TestChannel(c *gin.Context) {
 	tok := time.Now()
 	milliseconds := tok.Sub(tik).Milliseconds()
 	go channel.UpdateResponseTime(milliseconds)
+	recordChannelProbe(channel, testModel, result.newAPIError == nil, milliseconds)
 	consumedTime := float64(milliseconds) / 1000.0
 	if result.newAPIError != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -960,6 +984,7 @@ func testChannelForHealthCheck(ctx context.Context, channel *model.Channel, test
 	}
 
 	channel.UpdateResponseTime(milliseconds)
+	recordChannelProbe(channel, "", newAPIError == nil, milliseconds)
 	return summary
 }
 

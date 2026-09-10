@@ -122,6 +122,16 @@ export function SidebarModulesSection({
         title: t('Task logs'),
         description: t('Background job tracker for queued work.'),
       },
+      usage_details: {
+        title: t('Usage Details'),
+        description: t('Spend, token usage and request counts by model.'),
+      },
+      model_status: {
+        title: t('Model Status'),
+        description: t(
+          'Model health and probe history from scheduled channel tests.'
+        ),
+      },
     },
     personal: {
       topup: {
@@ -237,11 +247,70 @@ export function SidebarModulesSection({
                 />
 
                 <SettingsControlChildren className='grid gap-3 md:grid-cols-2'>
-                  {modules.map(([moduleKey]) => {
+                  {modules.map(([moduleKey, moduleValue]) => {
                     const moduleInfo = moduleMeta[sectionKey]?.[moduleKey] ?? {
                       title: toTitleCase(moduleKey),
                       description: t('Custom module'),
                     }
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const sectionEnabled = Boolean(
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      form.watch(`${sectionKey}.enabled` as any)
+                    )
+
+                    // Modules that carry a feature switch render two toggles:
+                    // "Feature" keeps the page (and any background work it
+                    // drives) running, "Display" only hides the sidebar entry.
+                    if (typeof moduleValue !== 'boolean') {
+                      return (
+                        <SettingsSwitchItem
+                          key={`${sectionKey}.${moduleKey}`}
+                          className='py-2'
+                        >
+                          <SettingsSwitchContent>
+                            <FormLabel>{moduleInfo.title}</FormLabel>
+                            <FormDescription>
+                              {moduleInfo.description}
+                            </FormDescription>
+                          </SettingsSwitchContent>
+                          <div className='flex shrink-0 flex-col items-end gap-1.5'>
+                            <FormField
+                              control={form.control}
+                              name={
+                                `${sectionKey}.${moduleKey}.enabled` as never
+                              }
+                              render={({ field }) => (
+                                <span className='text-muted-foreground flex items-center gap-1.5 text-[11px]'>
+                                  {t('Feature')}
+                                  <Switch
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={field.onChange}
+                                    disabled={!sectionEnabled}
+                                  />
+                                </span>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={
+                                `${sectionKey}.${moduleKey}.visible` as never
+                              }
+                              render={({ field }) => (
+                                <span className='text-muted-foreground flex items-center gap-1.5 text-[11px]'>
+                                  {t('Display')}
+                                  <Switch
+                                    checked={Boolean(field.value)}
+                                    onCheckedChange={field.onChange}
+                                    disabled={!sectionEnabled}
+                                  />
+                                </span>
+                              )}
+                            />
+                          </div>
+                        </SettingsSwitchItem>
+                      )
+                    }
+
                     return (
                       <FormField
                         key={`${sectionKey}.${moduleKey}`}
@@ -260,10 +329,7 @@ export function SidebarModulesSection({
                               <Switch
                                 checked={Boolean(field.value)}
                                 onCheckedChange={field.onChange}
-                                disabled={
-                                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                                  !form.watch(`${sectionKey}.enabled` as any)
-                                }
+                                disabled={!sectionEnabled}
                               />
                             </FormControl>
                           </SettingsSwitchItem>

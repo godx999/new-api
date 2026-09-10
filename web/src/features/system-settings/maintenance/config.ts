@@ -31,9 +31,18 @@ export type HeaderNavModulesConfig = {
   [key: string]: boolean | HeaderNavAccessConfig
 }
 
+/** A module is either a legacy boolean (display only) or an object carrying a
+ * separate feature switch. */
+export type SidebarModuleFlags = {
+  enabled: boolean
+  visible: boolean
+}
+
+export type SidebarModuleValue = boolean | SidebarModuleFlags
+
 export type SidebarSectionConfig = {
   enabled: boolean
-  [key: string]: boolean
+  [key: string]: SidebarModuleValue
 }
 
 export type SidebarModulesAdminConfig = Record<string, SidebarSectionConfig>
@@ -67,6 +76,8 @@ export const SIDEBAR_MODULES_DEFAULT: SidebarModulesAdminConfig = {
     audit: true,
     midjourney: true,
     task: true,
+    usage_details: { enabled: true, visible: true },
+    model_status: { enabled: true, visible: true },
   },
   personal: {
     enabled: true,
@@ -102,6 +113,33 @@ const cloneHeaderNavDefault = (): HeaderNavModulesConfig => ({
   rankings: { ...HEADER_NAV_DEFAULT.rankings },
 })
 
+/** Reads one module entry, preserving the object shape used by modules that
+ * carry a separate feature switch. A legacy boolean only ever meant "display",
+ * so the feature stays on and only `visible` is taken from it. */
+const parseSidebarModuleValue = (
+  value: unknown,
+  fallback: SidebarModuleValue
+): SidebarModuleValue => {
+  if (typeof fallback === 'boolean') {
+    return toBoolean(value, fallback)
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>
+    return {
+      enabled: toBoolean(record.enabled, fallback.enabled),
+      visible: toBoolean(record.visible, fallback.visible),
+    }
+  }
+  if (
+    typeof value === 'boolean' ||
+    typeof value === 'number' ||
+    typeof value === 'string'
+  ) {
+    return { enabled: fallback.enabled, visible: toBoolean(value, fallback.visible) }
+  }
+  return { ...fallback }
+}
+
 const parseAccessModule = (
   raw: unknown,
   fallback: HeaderNavAccessConfig
@@ -129,11 +167,22 @@ const parseAccessModule = (
 const cloneSidebarDefault = (): SidebarModulesAdminConfig =>
   Object.entries(SIDEBAR_MODULES_DEFAULT).reduce<SidebarModulesAdminConfig>(
     (acc, [section, config]) => {
-      acc[section] = { ...config }
+      acc[section] = cloneSidebarSection(config)
       return acc
     },
     {}
   )
+
+const cloneSidebarSection = (
+  config: SidebarSectionConfig
+): SidebarSectionConfig => {
+  const cloned: SidebarSectionConfig = { enabled: config.enabled }
+  Object.entries(config).forEach(([key, value]) => {
+    if (key === 'enabled') return
+    cloned[key] = typeof value === 'boolean' ? value : { ...value }
+  })
+  return cloned
+}
 
 export function parseHeaderNavModules(
   value: string | null | undefined
@@ -207,7 +256,7 @@ export function parseSidebarModulesAdmin(
       Object.entries(raw as Record<string, unknown>).forEach(
         ([moduleKey, moduleValue]) => {
           if (moduleKey === 'enabled') return
-          sectionConfig[moduleKey] = toBoolean(
+          sectionConfig[moduleKey] = parseSidebarModuleValue(
             moduleValue,
             defaultSection[moduleKey] ?? true
           )
@@ -220,13 +269,14 @@ export function parseSidebarModulesAdmin(
     // Merge defaults to ensure expected sections exist
     Object.entries(defaults).forEach(([sectionKey, config]) => {
       if (!result[sectionKey]) {
-        result[sectionKey] = { ...config }
+        result[sectionKey] = cloneSidebarSection(config)
         return
       }
 
       Object.entries(config).forEach(([moduleKey, moduleValue]) => {
         if (!(moduleKey in result[sectionKey])) {
-          result[sectionKey][moduleKey] = moduleValue
+          result[sectionKey][moduleKey] =
+            typeof moduleValue === 'boolean' ? moduleValue : { ...moduleValue }
         }
       })
     })

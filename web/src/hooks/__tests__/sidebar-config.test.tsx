@@ -143,8 +143,13 @@ describe('audit log sidebar entry', () => {
     )
     const items =
       result.current.find((group) => group.id === 'general')?.items ?? []
-    const usageIndex = items.findIndex((item) => item.title === 'Usage Logs')
-    expect(items[usageIndex + 1]).toMatchObject({
+    const titles = items.map((item) => item.title)
+    // Audit Logs stays a separate entry rendered after Usage Logs; other
+    // console pages may sit in between.
+    expect(titles.indexOf('Audit Logs')).toBeGreaterThan(
+      titles.indexOf('Usage Logs')
+    )
+    expect(items.find((item) => item.title === 'Audit Logs')).toMatchObject({
       title: 'Audit Logs',
       url: '/usage-logs/audit',
     })
