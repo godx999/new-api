@@ -138,8 +138,8 @@ export function UsageDetails() {
   const isAdmin = Boolean(user?.role && user.role >= ROLE.ADMIN)
   const featureEnabled = useIsModuleFeatureEnabled('/usage-details')
 
-  const [rangeKey, setRangeKey] = useState<RangeKey>('last12Months')
-  const [granularity, setGranularity] = useState<UsageGranularity>('month')
+  const [rangeKey, setRangeKey] = useState<RangeKey>('today')
+  const [granularity, setGranularity] = useState<UsageGranularity>('day')
   const [search, setSearch] = useState('')
   const [showDeleted, setShowDeleted] = useState(false)
   const [username, setUsername] = useState('')
@@ -381,6 +381,7 @@ export function UsageDetails() {
             data={chartData}
             loading={query.isPending}
             timeGranularity={granularity}
+            defaultChartType='area'
           />
 
           <StaticDataTable

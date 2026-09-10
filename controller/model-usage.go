@@ -80,18 +80,26 @@ func buildModelUsagePayload(start, end, tzOffset int64, granularity string, user
 		enabled[name] = true
 	}
 
+	// quota_data timestamps are hour buckets; the logs carry the exact request
+	// time, so prefer them for the "last used" column (minute-level).
+	lastUsedExact := model.GetModelLastUsedAt(start, end, userID, username)
+
 	summary := modelUsageSummary{ModelCount: len(rows)}
 	items := make([]modelUsageItem, 0, len(rows))
 	for _, row := range rows {
 		summary.Quota += row.Quota
 		summary.TokenUsed += row.TokenUsed
 		summary.Count += row.Count
+		lastUsedAt := row.LastUsedAt
+		if at, ok := lastUsedExact[row.ModelName]; ok {
+			lastUsedAt = at
+		}
 		items = append(items, modelUsageItem{
 			ModelName:  row.ModelName,
 			Quota:      row.Quota,
 			TokenUsed:  row.TokenUsed,
 			Count:      row.Count,
-			LastUsedAt: row.LastUsedAt,
+			LastUsedAt: lastUsedAt,
 			Available:  enabled[row.ModelName],
 		})
 	}

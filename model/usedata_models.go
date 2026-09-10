@@ -106,3 +106,33 @@ func AlignModelUsageBucket(bucket, tzOffset int64, granularity string) int64 {
 	}
 	return local.Unix() - tzOffset
 }
+
+// GetModelLastUsedAt returns the exact last-request timestamp per model from
+// the consume logs. quota_data only keeps hourly buckets (its created_at is
+// floored to the hour), which is why the UI would otherwise show on-the-hour
+// times; this lets it render down to the minute. Errors are swallowed on
+// purpose — callers fall back to the hourly value.
+func GetModelLastUsedAt(start, end int64, userID int, username string) map[string]int64 {
+	type lastUsedRow struct {
+		ModelName  string
+		LastUsedAt int64
+	}
+	var rows []lastUsedRow
+	tx := LOG_DB.Table("logs").
+		Select("model_name, MAX(created_at) AS last_used_at").
+		Where("type = ? AND created_at >= ? AND created_at <= ?", LogTypeConsume, start, end)
+	if userID > 0 {
+		tx = tx.Where("user_id = ?", userID)
+	} else if username != "" {
+		tx = tx.Where("username = ?", username)
+	}
+	if err := tx.Group("model_name").Scan(&rows).Error; err != nil {
+		common.SysError("failed to load model last-used time: " + err.Error())
+		return nil
+	}
+	result := make(map[string]int64, len(rows))
+	for _, row := range rows {
+		result[row.ModelName] = row.LastUsedAt
+	}
+	return result
+}
