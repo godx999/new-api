@@ -57,6 +57,21 @@ func channelTestModel(channel *model.Channel) string {
 	return "gpt-4o-mini"
 }
 
+// probeOutcome reports whether a channel test actually exercised the channel,
+// and whether it succeeded.
+//
+// testChannel only returns a nil context for the two purely local failures that
+// never reach the upstream (unsupported channel type, user cache lookup). Every
+// other outcome — success or upstream failure — carries a context, and all
+// upstream failure paths set newAPIError. Skipping nil-context results keeps an
+// untestable channel from being reported as healthy.
+func probeOutcome(result testResult) (ran bool, success bool) {
+	if result.context == nil {
+		return false, false
+	}
+	return true, result.localErr == nil && result.newAPIError == nil
+}
+
 // recordChannelProbe stores one test result for the model status page. It is a
 // no-op when the model status feature is switched off, so turning the feature
 // off also stops the history from growing.
@@ -899,6 +914,11 @@ func TestChannel(c *gin.Context) {
 	}
 	result := testChannel(requestCtx, channel, testUserID, testModel, endpointType, isStream)
 	if result.localErr != nil {
+		// Upstream failures surface as localErr too, so record them here as
+		// well; only purely local failures (no test context) are skipped.
+		if ran, success := probeOutcome(result); ran {
+			recordChannelProbe(channel, testModel, success, time.Since(tik).Milliseconds())
+		}
 		resp := gin.H{
 			"success": false,
 			"message": result.localErr.Error(),
@@ -913,7 +933,9 @@ func TestChannel(c *gin.Context) {
 	tok := time.Now()
 	milliseconds := tok.Sub(tik).Milliseconds()
 	go channel.UpdateResponseTime(milliseconds)
-	recordChannelProbe(channel, testModel, result.newAPIError == nil, milliseconds)
+	if ran, success := probeOutcome(result); ran {
+		recordChannelProbe(channel, testModel, success, milliseconds)
+	}
 	consumedTime := float64(milliseconds) / 1000.0
 	if result.newAPIError != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -984,7 +1006,9 @@ func testChannelForHealthCheck(ctx context.Context, channel *model.Channel, test
 	}
 
 	channel.UpdateResponseTime(milliseconds)
-	recordChannelProbe(channel, "", newAPIError == nil, milliseconds)
+	if ran, success := probeOutcome(result); ran {
+		recordChannelProbe(channel, "", success, milliseconds)
+	}
 	return summary
 }
 

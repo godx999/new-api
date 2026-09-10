@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { ConsumptionDistributionChart } from '@/features/dashboard/components/models/consumption-distribution-chart'
 import type { QuotaDataItem } from '@/features/dashboard/types'
+import { useIsModuleFeatureEnabled } from '@/hooks/use-sidebar-config'
 import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import dayjs from '@/lib/dayjs'
 import { ROLE } from '@/lib/roles'
@@ -82,6 +83,7 @@ export function UsageDetails() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.auth.user)
   const isAdmin = Boolean(user?.role && user.role >= ROLE.ADMIN)
+  const featureEnabled = useIsModuleFeatureEnabled('/usage-details')
 
   const [rangeKey, setRangeKey] = useState<RangeKey>('last12Months')
   const [granularity, setGranularity] = useState<UsageGranularity>('month')
@@ -114,6 +116,7 @@ export function UsageDetails() {
         username: isAdmin && username ? username : undefined,
         isAdmin,
       }),
+    enabled: featureEnabled,
     staleTime: 60 * 1000,
   })
 
@@ -201,6 +204,19 @@ export function UsageDetails() {
       })),
     [payload?.series]
   )
+
+  if (!featureEnabled) {
+    return (
+      <SectionPageLayout>
+        <SectionPageLayout.Title>{t('Usage Details')}</SectionPageLayout.Title>
+        <SectionPageLayout.Content>
+          <div className='bg-card text-muted-foreground rounded-2xl border p-6 text-sm shadow-xs'>
+            {t('This feature is disabled in system settings.')}
+          </div>
+        </SectionPageLayout.Content>
+      </SectionPageLayout>
+    )
+  }
 
   const statCard = (label: string, value: string) => (
     <div key={label} className='bg-card rounded-2xl border p-4 shadow-xs'>

@@ -25,6 +25,7 @@ import type {
   ProcessedUserChartData,
 } from '@/features/dashboard/types'
 import { getCurrencyDisplay } from '@/lib/currency'
+import dayjs from '@/lib/dayjs'
 import { formatChartTime, type TimeGranularity } from '@/lib/time'
 
 type TFunction = (key: string) => string
@@ -37,6 +38,13 @@ type TooltipLineItem = {
   shapeFill?: string
   shapeStroke?: string
   shapeSize?: number
+}
+
+/** Backwards step for the fixed-stride granularities; month steps by calendar. */
+const NON_MONTH_INTERVAL_SECONDS: Partial<Record<TimeGranularity, number>> = {
+  hour: 3600,
+  day: 86400,
+  week: 604800,
 }
 
 export function getDashboardChartColors(domainLength: number): string[] {
@@ -62,6 +70,45 @@ function renderQuotaCompat(rawQuota: number, digits = 4): string {
     return symbol + Math.pow(10, -digits).toFixed(digits)
   }
   return symbol + fixed
+}
+
+/**
+ * Build the trend chart's time axis. When fewer buckets than
+ * MAX_CHART_TREND_POINTS are returned the axis is padded backwards from the
+ * last data point so the chart still reads as a trend.
+ *
+ * Month buckets must step by calendar month: a fixed 30-day stride drifts and
+ * produces skipped (February) and repeated (January) labels as well as dropping
+ * real data months off the axis. Real keys are unioned in so a month outside
+ * the padded window is never silently lost.
+ */
+export function padChartTimePoints(
+  times: string[],
+  lastTime: number,
+  timeGranularity: TimeGranularity
+): string[] {
+  if (times.length >= MAX_CHART_TREND_POINTS) return times
+  if (!Number.isFinite(lastTime) || lastTime <= 0) return times
+
+  if (timeGranularity === 'month') {
+    const lastMonth = dayjs.unix(lastTime)
+    const padded = Array.from({ length: MAX_CHART_TREND_POINTS }, (_, i) =>
+      formatChartTime(
+        lastMonth.subtract(MAX_CHART_TREND_POINTS - 1 - i, 'month').unix(),
+        timeGranularity
+      )
+    )
+    return [...new Set([...padded, ...times])].sort()
+  }
+
+  const intervalSec = NON_MONTH_INTERVAL_SECONDS[timeGranularity] ?? 3600
+
+  return Array.from({ length: MAX_CHART_TREND_POINTS }, (_, i) =>
+    formatChartTime(
+      lastTime - (MAX_CHART_TREND_POINTS - 1 - i) * intervalSec,
+      timeGranularity
+    )
+  )
 }
 
 /**
@@ -273,27 +320,11 @@ export function processChartData(
   }
 
   // Pad time points if too few (default 7 points)
-  const MAX_TREND_POINTS = MAX_CHART_TREND_POINTS
   const fillTimePoints = (times: string[]) => {
-    if (times.length >= MAX_TREND_POINTS) return times
     const lastTime = Math.max(
       ...data.map((item) => Number(item.created_at) || 0)
     )
-    const intervalSec =
-      timeGranularity === 'month'
-        ? 2592000
-        : timeGranularity === 'week'
-          ? 604800
-          : timeGranularity === 'day'
-            ? 86400
-            : 3600
-    const padded = Array.from({ length: MAX_TREND_POINTS }, (_, i) =>
-      formatChartTime(
-        lastTime - (MAX_TREND_POINTS - 1 - i) * intervalSec,
-        timeGranularity
-      )
-    )
-    return padded
+    return padChartTimePoints(times, lastTime, timeGranularity)
   }
   const chartTimes = fillTimePoints(sortedTimes)
 

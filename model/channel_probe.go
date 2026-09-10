@@ -13,7 +13,7 @@ import (
 type ChannelProbe struct {
 	Id        int    `json:"id"`
 	ChannelId int    `json:"channel_id" gorm:"index:idx_channel_probe_channel_time,priority:1"`
-	ModelName string `json:"model_name" gorm:"size:64;default:''"`
+	ModelName string `json:"model_name" gorm:"size:255;default:''"`
 	Success   bool   `json:"success"`
 	LatencyMs int    `json:"latency_ms"`
 	CreatedAt int64  `json:"created_at" gorm:"bigint;index:idx_channel_probe_channel_time,priority:2"`

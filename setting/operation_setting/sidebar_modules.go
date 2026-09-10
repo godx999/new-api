@@ -44,7 +44,12 @@ func objectField(raw json.RawMessage, key string) (json.RawMessage, bool) {
 // Anything missing or unreadable defaults to enabled, so upgrading never
 // silently turns a feature off.
 func IsSidebarModuleFeatureEnabled(section, module string) bool {
+	// Called from concurrent channel-test workers, so the shared option map must
+	// be read under the same lock its writers take.
+	common.OptionMapRWMutex.RLock()
 	raw := strings.TrimSpace(common.OptionMap[SidebarModulesAdminOptionKey])
+	common.OptionMapRWMutex.RUnlock()
+
 	if raw == "" {
 		return true
 	}
