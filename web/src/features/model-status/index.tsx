@@ -249,6 +249,7 @@ export function ModelStatus() {
         id: 'latency',
         header: th(t('Response time')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) =>
           row.latency_ms > 0 ? (
             <span
@@ -267,6 +268,7 @@ export function ModelStatus() {
         id: 'channels',
         header: th(t('Channels')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) => (
           <span className='tabular-nums'>
             {row.channels_up} / {row.channels_total}
@@ -277,6 +279,7 @@ export function ModelStatus() {
         id: 'lastProbe',
         header: th(t('Last check')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) =>
           row.last_probe_at > 0 ? (
             <span className='text-muted-foreground text-xs tabular-nums'>

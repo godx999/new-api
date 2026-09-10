@@ -211,6 +211,7 @@ export function UsageDetails() {
         id: 'quota',
         header: th(t('Spend')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) => (
           <span className='font-medium tabular-nums'>
             {formatQuota(row.quota)}
@@ -221,6 +222,7 @@ export function UsageDetails() {
         id: 'tokens',
         header: th(t('Tokens')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) => (
           <span className='tabular-nums'>{formatTokens(row.token_used)}</span>
         ),
@@ -229,6 +231,7 @@ export function UsageDetails() {
         id: 'count',
         header: th(t('Requests')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) => (
           <span className='tabular-nums'>{formatNumber(row.count)}</span>
         ),
@@ -237,6 +240,7 @@ export function UsageDetails() {
         id: 'share',
         header: th(t('Share')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) => {
           const share = totalQuota > 0 ? (row.quota / totalQuota) * 100 : null
           return (
@@ -260,6 +264,7 @@ export function UsageDetails() {
         id: 'lastUsed',
         header: th(t('Last used')),
         className: 'text-right',
+        cellClassName: 'text-right',
         cell: (row) =>
           row.last_used_at > 0 ? (
             <span className='text-muted-foreground text-xs tabular-nums'>
