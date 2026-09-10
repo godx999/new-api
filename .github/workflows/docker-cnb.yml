@@ -28,6 +28,12 @@ jobs:
         id: image
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
 
+      - name: Write VERSION
+        run: echo "v$(date +%Y%m%d)-${GITHUB_SHA::7}" > VERSION
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Resolve Aliyun registry (optional)
         id: aliyun
         if: env.ALIYUN_IMAGE != ''
