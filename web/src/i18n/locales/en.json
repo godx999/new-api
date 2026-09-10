@@ -6019,6 +6019,8 @@
     "Feature": "Feature",
     "Display": "Display",
     "Spend, token usage and request counts by model.": "Spend, token usage and request counts by model.",
-    "Model health and probe history from scheduled channel tests.": "Model health and probe history from scheduled channel tests."
+    "Model health and probe history from scheduled channel tests.": "Model health and probe history from scheduled channel tests.",
+    "Passed": "Passed",
+    "Slow": "Slow"
   }
 }

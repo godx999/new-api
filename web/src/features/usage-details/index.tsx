@@ -2,9 +2,11 @@ import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { StaticDataTable, type StaticDataTableColumn } from '@/components/data-table'
+import {
+  StaticDataTable,
+  type StaticDataTableColumn,
+} from '@/components/data-table'
 import { SectionPageLayout } from '@/components/layout'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { ConsumptionDistributionChart } from '@/features/dashboard/components/models/consumption-distribution-chart'
@@ -13,6 +15,7 @@ import { useIsModuleFeatureEnabled } from '@/hooks/use-sidebar-config'
 import { formatNumber, formatQuota, formatTokens } from '@/lib/format'
 import dayjs from '@/lib/dayjs'
 import { ROLE } from '@/lib/roles'
+import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth-store'
 
 import { getModelUsage } from './api'
@@ -26,31 +29,23 @@ type RangeKey =
   | 'last30'
   | 'last12Months'
 
-const RANGE_KEYS: RangeKey[] = [
-  'today',
-  'thisWeek',
-  'thisMonth',
-  'last7',
-  'last30',
-  'last12Months',
+const RANGE_OPTIONS: Array<{ value: RangeKey; label: string }> = [
+  { value: 'today', label: 'Today' },
+  { value: 'thisWeek', label: 'This week' },
+  { value: 'thisMonth', label: 'Current month' },
+  { value: 'last7', label: 'Last 7 days' },
+  { value: 'last30', label: 'Last 30 days' },
+  { value: 'last12Months', label: 'Last 12 months' },
 ]
 
-const RANGE_LABELS: Record<RangeKey, string> = {
-  today: 'Today',
-  thisWeek: 'This week',
-  thisMonth: 'This month',
-  last7: 'Last 7 days',
-  last30: 'Last 30 days',
-  last12Months: 'Last 12 months',
-}
-
-const GRANULARITIES: UsageGranularity[] = ['day', 'week', 'month']
-
-const GRANULARITY_LABELS: Record<UsageGranularity, string> = {
-  day: 'Day',
-  week: 'Week',
-  month: 'Month',
-}
+const GRANULARITY_OPTIONS: Array<{
+  value: UsageGranularity
+  label: string
+}> = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+]
 
 /** Monday-based start of week; dayjs' startOf('week') is locale dependent. */
 function startOfWeekMonday(date: dayjs.Dayjs): dayjs.Dayjs {
@@ -77,6 +72,64 @@ function resolveRange(key: RangeKey): { start: number; end: number } {
         end,
       }
   }
+}
+
+/** Small segmented control, visually matching the approved preview. */
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ value: T; label: string }>
+  value: T
+  onChange: (value: T) => void
+}) {
+  return (
+    <div className='bg-muted text-muted-foreground inline-flex flex-wrap items-center gap-0.5 rounded-lg border p-0.5'>
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type='button'
+          onClick={() => onChange(option.value)}
+          className={cn(
+            'h-7 rounded-md px-2.5 text-xs font-medium whitespace-nowrap transition-colors',
+            value === option.value
+              ? 'bg-background text-foreground shadow-sm'
+              : 'hover:text-foreground'
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Table header rendered like the preview: small, muted, uppercase. */
+function th(label: string) {
+  return (
+    <span className='text-muted-foreground text-[11px] font-semibold tracking-wider uppercase'>
+      {label}
+    </span>
+  )
+}
+
+function StatCard(props: { label: string; value: string; foot?: string }) {
+  return (
+    <div className='bg-card rounded-xl border p-4 shadow-xs'>
+      <div className='text-muted-foreground text-[11px] font-semibold tracking-wide uppercase'>
+        {props.label}
+      </div>
+      <div className='mt-1 text-2xl font-bold tracking-tight tabular-nums'>
+        {props.value}
+      </div>
+      {props.foot ? (
+        <div className='text-muted-foreground mt-0.5 text-[11px]'>
+          {props.foot}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 export function UsageDetails() {
@@ -142,12 +195,12 @@ export function UsageDetails() {
     return [
       {
         id: 'model',
-        header: t('Model'),
+        header: th(t('Model')),
         cell: (row) => (
-          <span className='flex items-center gap-2'>
+          <span className='flex min-w-0 items-center gap-2'>
             <span className='truncate font-medium'>{row.model_name}</span>
             {!row.available && (
-              <span className='text-muted-foreground shrink-0 rounded border px-1.5 py-0.5 text-[10px]'>
+              <span className='text-muted-foreground bg-muted shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium'>
                 {t('Deleted')}
               </span>
             )}
@@ -156,39 +209,65 @@ export function UsageDetails() {
       },
       {
         id: 'quota',
-        header: t('Spend'),
+        header: th(t('Spend')),
         className: 'text-right',
-        cell: (row) => formatQuota(row.quota),
+        cell: (row) => (
+          <span className='font-medium tabular-nums'>
+            {formatQuota(row.quota)}
+          </span>
+        ),
       },
       {
         id: 'tokens',
-        header: t('Tokens'),
+        header: th(t('Tokens')),
         className: 'text-right',
-        cell: (row) => formatTokens(row.token_used),
+        cell: (row) => (
+          <span className='tabular-nums'>{formatTokens(row.token_used)}</span>
+        ),
       },
       {
         id: 'count',
-        header: t('Requests'),
+        header: th(t('Requests')),
         className: 'text-right',
-        cell: (row) => formatNumber(row.count),
+        cell: (row) => (
+          <span className='tabular-nums'>{formatNumber(row.count)}</span>
+        ),
       },
       {
         id: 'share',
-        header: t('Share'),
+        header: th(t('Share')),
         className: 'text-right',
-        cell: (row) =>
-          totalQuota > 0
-            ? `${((row.quota / totalQuota) * 100).toFixed(1)}%`
-            : '—',
+        cell: (row) => {
+          const share = totalQuota > 0 ? (row.quota / totalQuota) * 100 : null
+          return (
+            <span className='flex items-center justify-end gap-2'>
+              <span className='bg-muted hidden h-1 w-14 shrink-0 overflow-hidden rounded-full sm:block'>
+                {share !== null && (
+                  <span
+                    className='bg-primary h-full rounded-full'
+                    style={{ width: `${Math.min(100, share).toFixed(1)}%` }}
+                  />
+                )}
+              </span>
+              <span className='min-w-[42px] text-right font-medium tabular-nums'>
+                {share !== null ? `${share.toFixed(1)}%` : '—'}
+              </span>
+            </span>
+          )
+        },
       },
       {
         id: 'lastUsed',
-        header: t('Last used'),
+        header: th(t('Last used')),
         className: 'text-right',
         cell: (row) =>
-          row.last_used_at > 0
-            ? dayjs(row.last_used_at * 1000).format('MM-DD HH:mm')
-            : '—',
+          row.last_used_at > 0 ? (
+            <span className='text-muted-foreground text-xs tabular-nums'>
+              {dayjs(row.last_used_at * 1000).format('MM-DD HH:mm')}
+            </span>
+          ) : (
+            <span className='text-muted-foreground'>—</span>
+          ),
       },
     ]
   }, [summary?.quota, t])
@@ -218,57 +297,45 @@ export function UsageDetails() {
     )
   }
 
-  const statCard = (label: string, value: string) => (
-    <div key={label} className='bg-card rounded-2xl border p-4 shadow-xs'>
-      <div className='text-muted-foreground text-xs font-medium tracking-wide uppercase'>
-        {label}
-      </div>
-      <div className='mt-1.5 text-2xl font-semibold tabular-nums'>{value}</div>
-    </div>
-  )
-
   return (
     <SectionPageLayout>
       <SectionPageLayout.Title>{t('Usage Details')}</SectionPageLayout.Title>
       <SectionPageLayout.Content>
         <div className='flex flex-col gap-4'>
-          <div className='bg-card flex flex-col gap-3 rounded-2xl border p-4 shadow-xs'>
-            <div className='flex flex-wrap items-center gap-2'>
-              <span className='text-muted-foreground text-xs font-semibold tracking-wide uppercase'>
+          <div className='bg-card flex flex-col gap-3 rounded-xl border p-4 shadow-xs'>
+            <div className='flex flex-wrap items-center gap-x-5 gap-y-2'>
+              <span className='text-muted-foreground text-[11px] font-semibold tracking-wide uppercase'>
                 {t('Range')}
               </span>
-              {RANGE_KEYS.map((key) => (
-                <Button
-                  key={key}
-                  size='sm'
-                  variant={rangeKey === key ? 'default' : 'outline'}
-                  onClick={() => setRangeKey(key)}
-                >
-                  {t(RANGE_LABELS[key])}
-                </Button>
-              ))}
-              <span className='text-muted-foreground ml-2 text-xs font-semibold tracking-wide uppercase'>
+              <Segmented
+                value={rangeKey}
+                onChange={setRangeKey}
+                options={RANGE_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: t(option.label),
+                }))}
+              />
+              <span className='bg-border mx-1 hidden h-6 w-px self-center lg:block' />
+              <span className='text-muted-foreground text-[11px] font-semibold tracking-wide uppercase'>
                 {t('Granularity')}
               </span>
-              {GRANULARITIES.map((key) => (
-                <Button
-                  key={key}
-                  size='sm'
-                  variant={granularity === key ? 'default' : 'outline'}
-                  onClick={() => setGranularity(key)}
-                >
-                  {t(GRANULARITY_LABELS[key])}
-                </Button>
-              ))}
+              <Segmented
+                value={granularity}
+                onChange={setGranularity}
+                options={GRANULARITY_OPTIONS.map((option) => ({
+                  value: option.value,
+                  label: t(option.label),
+                }))}
+              />
             </div>
-            <div className='flex flex-wrap items-center gap-3'>
+            <div className='flex flex-wrap items-center gap-x-4 gap-y-2'>
               <Input
                 className='h-8 w-48'
                 placeholder={t('Search model')}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
-              <label className='text-muted-foreground flex items-center gap-2 text-xs'>
+              <label className='text-muted-foreground flex cursor-pointer items-center gap-2 text-xs'>
                 <Switch checked={showDeleted} onCheckedChange={setShowDeleted} />
                 {t('Show deleted models')}
               </label>
@@ -284,24 +351,25 @@ export function UsageDetails() {
           </div>
 
           <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
-            {statCard(
-              t('Total spend'),
-              summary ? formatQuota(summary.quota) : '—'
-            )}
-            {statCard(
-              t('Total tokens'),
-              summary ? formatTokens(summary.token_used) : '—'
-            )}
-            {statCard(
-              t('Total requests'),
-              summary ? formatNumber(summary.count) : '—'
-            )}
-            {statCard(
-              t('Models used'),
-              summary
-                ? `${summary.model_count}${deletedCount > 0 ? ` (${deletedCount} ${t('deleted')})` : ''}`
-                : '—'
-            )}
+            <StatCard
+              label={t('Total spend')}
+              value={summary ? formatQuota(summary.quota) : '—'}
+            />
+            <StatCard
+              label={t('Total tokens')}
+              value={summary ? formatTokens(summary.token_used) : '—'}
+            />
+            <StatCard
+              label={t('Total requests')}
+              value={summary ? formatNumber(summary.count) : '—'}
+            />
+            <StatCard
+              label={t('Models used')}
+              value={summary ? String(summary.model_count) : '—'}
+              foot={
+                deletedCount > 0 ? `${deletedCount} ${t('deleted')}` : undefined
+              }
+            />
           </div>
 
           <ConsumptionDistributionChart

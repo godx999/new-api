@@ -6019,6 +6019,8 @@
     "Feature": "功能",
     "Display": "展示",
     "Spend, token usage and request counts by model.": "按模型查看消费金额、Token 用量与调用次数。",
-    "Model health and probe history from scheduled channel tests.": "基于定期渠道测试的模型健康状态与检测历史。"
+    "Model health and probe history from scheduled channel tests.": "基于定期渠道测试的模型健康状态与检测历史。",
+    "Passed": "通过",
+    "Slow": "偏慢"
   }
 }

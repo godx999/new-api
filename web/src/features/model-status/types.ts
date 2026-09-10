@@ -3,6 +3,14 @@ export type ModelState = 'ok' | 'warn' | 'err' | 'idle'
 /** Probe result codes: 0 passed, 1 slow, 2 failed. */
 export type ProbeResultCode = 0 | 1 | 2
 
+/** One block of the "last 24 probes" strip. */
+export interface RecentProbe {
+  code: ProbeResultCode
+  /** Unix seconds; shown in the hover tooltip. */
+  ts: number
+  latency_ms: number
+}
+
 export interface ModelProbeInfo {
   enabled: boolean
   interval_minutes: number
@@ -19,7 +27,7 @@ export interface ModelStatusRow {
   channels_up: number
   channels_total: number
   last_probe_at: number
-  recent: ProbeResultCode[]
+  recent: RecentProbe[]
 }
 
 export interface ModelStatusPayload {

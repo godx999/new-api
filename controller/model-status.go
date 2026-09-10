@@ -38,14 +38,22 @@ type modelStatusProbeInfo struct {
 	ChannelsTotal   int     `json:"channels_total"`
 }
 
+// RecentProbe is one block of the "last 24 probes" strip: result code, the
+// probe timestamp (for hover tooltips) and its latency.
+type RecentProbe struct {
+	Code      int   `json:"code"`
+	Ts        int64  `json:"ts"`
+	LatencyMs int   `json:"latency_ms"`
+}
+
 type modelStatusItem struct {
-	ModelName     string `json:"model_name"`
-	State         string `json:"state"`
-	LatencyMs     int    `json:"latency_ms"`
-	ChannelsUp    int    `json:"channels_up"`
-	ChannelsTotal int    `json:"channels_total"`
-	LastProbeAt   int64  `json:"last_probe_at"`
-	Recent        []int  `json:"recent"`
+	ModelName     string        `json:"model_name"`
+	State         string        `json:"state"`
+	LatencyMs     int           `json:"latency_ms"`
+	ChannelsUp    int           `json:"channels_up"`
+	ChannelsTotal int           `json:"channels_total"`
+	LastProbeAt   int64         `json:"last_probe_at"`
+	Recent        []RecentProbe `json:"recent"`
 }
 
 func probeResultCode(probe *model.ChannelProbe) int {
@@ -132,7 +140,7 @@ func GetModelStatus(c *gin.Context) {
 		item := modelStatusItem{
 			ModelName:     name,
 			ChannelsTotal: len(channels),
-			Recent:        make([]int, 0, modelStatusProbeCount),
+			Recent:        make([]RecentProbe, 0, modelStatusProbeCount),
 		}
 
 		merged := make([]*model.ChannelProbe, 0)
@@ -165,7 +173,11 @@ func GetModelStatus(c *gin.Context) {
 			start = len(merged) - modelStatusProbeCount
 		}
 		for _, probe := range merged[start:] {
-			item.Recent = append(item.Recent, probeResultCode(probe))
+			item.Recent = append(item.Recent, RecentProbe{
+				Code:      probeResultCode(probe),
+				Ts:        probe.CreatedAt,
+				LatencyMs: probe.LatencyMs,
+			})
 		}
 
 		totalLatency := 0
