@@ -85,6 +85,9 @@ jobs:
           tags: ${{ steps.tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          # Aliyun ACR rejects the OCI attestation manifests buildx attaches
+          # by default ("unknown manifest class"); GHCR is fine without them.
+          provenance: false
 
       - name: Image summary
         run: |
