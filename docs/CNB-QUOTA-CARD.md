@@ -58,6 +58,14 @@
 
 因为改了源码，需要构建自定义镜像。已内置 GitHub Actions 工作流（`docker-cnb.yml`），推送 `cnb-quota-card` 分支即自动构建并推送镜像到 GHCR：
 
+> **国内拉取 ghcr.io 很慢？** 工作流支持同时推送到**阿里云 ACR**（国内全速）：
+> 1. 阿里云控制台开通「容器镜像服务 → 个人实例」（免费），创建命名空间和仓库 `new-api`，在「访问凭证」页设置固定密码
+> 2. 在 GitHub 仓库 **Settings → Secrets and variables → Actions** 添加三个 secret：
+>    - `ALIYUN_IMAGE` = 完整镜像路径（不带 tag），如 `registry.cn-hangzhou.aliyuncs.com/你的命名空间/new-api`
+>    - `ALIYUN_USERNAME` = 访问凭证页显示的用户名（通常是阿里云账号全名）
+>    - `ALIYUN_PASSWORD` = 固定密码
+> 3. 之后每次构建会同时推送两处；NAS 的 compose 把镜像换成 `ALIYUN_IMAGE` 的值加 `:cnb` 即可全速拉取。**未配置时自动跳过，不影响 GHCR 推送。**
+
 1. **Fork** `QuantumNous/new-api` 到你的 GitHub 账号。
 2. 将本地的 `cnb-quota-card` 分支推送到你的 fork：
    ```bash
